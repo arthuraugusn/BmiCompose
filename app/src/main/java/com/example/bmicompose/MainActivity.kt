@@ -1,17 +1,23 @@
 package com.example.bmicompose
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -23,7 +29,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bmicompose.ui.theme.BmiComposeTheme
-
+import com.example.bmicompose.utils.calculateBmi
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,13 +53,14 @@ fun BmiCalculator(){
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        HeaderBmi()
-        MainBmi()
+        BmiCalculate()
     }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun HeaderBmi(){
+fun BmiCalculate(){
+    //Header
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -75,18 +82,32 @@ fun HeaderBmi(){
 
         )
     }
-}
 
-@Composable
-fun MainBmi(){
+    //Main
+    var numberWeight by rememberSaveable { mutableStateOf("") }
+    var numberHigh by rememberSaveable { mutableStateOf("") }
+    var bmi by rememberSaveable { mutableStateOf(0.00) }
+    var expandState by remember {
+        mutableStateOf(false)
+    }
+
+    var isWeightError by remember{
+        mutableStateOf(false)
+    }
+
+    var isHighError by remember{
+        mutableStateOf(false)
+    }
+
+    //Objeto que controla a requisição de foco
+    val weightFocusRequester = FocusRequester()
+
     Column(
         modifier = Modifier
             .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        var numberWeight by rememberSaveable { mutableStateOf("") }
-        var numberHigh by rememberSaveable { mutableStateOf("") }
-        var bmi by rememberSaveable { mutableStateOf(0.0) }
+
 
 
         Column {
@@ -96,10 +117,32 @@ fun MainBmi(){
             )
             OutlinedTextField(
                 value = numberWeight,
-                onValueChange = {
-                    numberWeight = it
+                onValueChange = {newWeight->
+                    Log.i("xxx", newWeight)
+                    var lastChar =
+                        if(newWeight.length == 0)
+                            newWeight
+                        else
+                            newWeight.get(newWeight.length - 1)
+                    var newValue =
+                        if (lastChar == '.' || lastChar == ',')
+                            newWeight.dropLast(1)
+                        else
+                            newWeight
+                    Log.i("xxx", lastChar.toString())
+                    Log.i("xxx", newValue)
+                    numberWeight = newValue
                 },
-                modifier = Modifier.padding(bottom = 10.dp),
+                modifier = Modifier
+                    .padding(bottom = 10.dp)
+                    .focusRequester(weightFocusRequester),
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Backup, contentDescription = "")
+                },
+                trailingIcon = {
+                    Icon(imageVector = Icons.Filled.Warning, contentDescription = "")
+                },
+                isError = isWeightError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 shape = RoundedCornerShape(15.dp)
             )
@@ -111,9 +154,29 @@ fun MainBmi(){
             )
             OutlinedTextField(
                 value = numberHigh,
-                onValueChange = {
-                    numberHigh = it
+                onValueChange = {newHeight->
+                    Log.i("xxx", newHeight)
+                    var lastChar =
+                        if(newHeight.length == 0)
+                            newHeight
+                        else
+                            newHeight.get(newHeight.length - 1)
+                    var newValue =
+                        if (lastChar == '.' || lastChar == ',')
+                            newHeight.dropLast(1)
+                        else
+                            newHeight
+                    Log.i("xxx", lastChar.toString())
+                    Log.i("xxx", newValue)
+                    numberHigh = newValue
                 },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Backup, contentDescription = "")
+                },
+                trailingIcon = {
+                    Icon(imageVector = Icons.Filled.Warning, contentDescription = "")
+                },
+                isError = isHighError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 shape = RoundedCornerShape(15.dp)
             )
@@ -130,7 +193,15 @@ fun MainBmi(){
             )
             ),
             onClick = {
-                bmi = calculateBmi(numberWeight.toDouble(), numberHigh.toDouble())
+                if (numberWeight != "" || numberHigh!=""  || numberWeight.length != 0 || numberHigh.length!=0 || numberHigh.toDouble() >300 || numberWeight.toDouble() > 300){
+                    bmi = calculateBmi(numberWeight.toDouble(), numberHigh.toDouble())
+                    expandState = true
+                    isWeightError = false
+                    isHighError = false
+                }else{
+                    isWeightError = true
+                    isHighError = true
+                }
             }
         ) {
             Text(
@@ -138,18 +209,14 @@ fun MainBmi(){
                 color = Color.White
             )
         }
-        FooterBmi(bmi = bmi, weight= numberWeight.toDouble(), height = numberHigh.toDouble())
     }
-}
 
-fun calculateBmi(weight:Double, height: Double):Double {
-    val bmi = weight/(height*height)
-    return bmi*100
-}
-
-@Composable
-fun FooterBmi(bmi: Double, weight: Double, height: Double){
-    Column {
+    //Footer
+    AnimatedVisibility(
+        visible = expandState,
+        enter = scaleIn() + expandVertically(expandFrom = Alignment.CenterVertically),
+        exit = scaleOut() + shrinkVertically(shrinkTowards = Alignment.CenterVertically)
+    ) {
         Card(
             modifier = Modifier
                 .fillMaxSize(),
@@ -166,7 +233,7 @@ fun FooterBmi(bmi: Double, weight: Double, height: Double){
                     fontSize = 32.sp
                 )
                 Text(
-                    text = bmi.toString(),
+                    text = String.format("%.2f", bmi),
                     modifier = Modifier.padding(bottom = 30.dp),
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold
@@ -176,29 +243,33 @@ fun FooterBmi(bmi: Double, weight: Double, height: Double){
                     fontSize = 28.sp,
                     textAlign = TextAlign.Center
                 )
-                Row{
+                Row {
 
                     Button(
                         onClick = {
-                            
+                            expandState = false
+                            numberWeight = ""
+                            numberHigh = ""
+                            weightFocusRequester.requestFocus()
                         },
-                        colors = ButtonDefaults.buttonColors(Color.Black)
                     ) {
                         Text(text = stringResource(id = R.string.reset))
                     }
                     Spacer(modifier = Modifier.padding(horizontal = 20.dp))
                     Button(
-                        onClick = { /*TODO*/ },
-                        colors = ButtonDefaults.buttonColors(Color.Black)
+                        onClick = {
+
+                        },
                     ) {
                         Text(text = stringResource(id = R.string.share))
                     }
-                    
+
                 }
             }
         }
     }
 }
+
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
