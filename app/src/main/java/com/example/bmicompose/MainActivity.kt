@@ -1,7 +1,9 @@
 package com.example.bmicompose
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
@@ -19,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -30,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bmicompose.ui.theme.BmiComposeTheme
 import com.example.bmicompose.utils.calculateBmi
+import com.example.bmicompose.utils.getColor
+import com.example.bmicompose.utils.resultBmi
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -99,8 +104,20 @@ fun BmiCalculate(){
         mutableStateOf(false)
     }
 
+    var resultTextBmi by rememberSaveable {
+        mutableStateOf("Não foi possível calcular")
+    }
+
     //Objeto que controla a requisição de foco
     val weightFocusRequester = FocusRequester()
+
+    val sendIntent: Intent = Intent().apply {
+        action = Intent.ACTION_SEND
+        putExtra(Intent.EXTRA_TEXT, "This is my text to send.")
+        type = "text/plain"
+    }
+    val shareIntent = Intent.createChooser(sendIntent, null)
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -110,76 +127,97 @@ fun BmiCalculate(){
 
 
 
-        Column {
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
             Text(
                 text = stringResource(id = R.string.weight),
                 modifier = Modifier.padding(bottom = 5.dp)
             )
-            OutlinedTextField(
-                value = numberWeight,
-                onValueChange = {newWeight->
-                    Log.i("xxx", newWeight)
-                    var lastChar =
-                        if(newWeight.length == 0)
-                            newWeight
-                        else
-                            newWeight.get(newWeight.length - 1)
-                    var newValue =
-                        if (lastChar == '.' || lastChar == ',')
-                            newWeight.dropLast(1)
-                        else
-                            newWeight
-                    Log.i("xxx", lastChar.toString())
-                    Log.i("xxx", newValue)
-                    numberWeight = newValue
-                },
-                modifier = Modifier
-                    .padding(bottom = 10.dp)
-                    .focusRequester(weightFocusRequester),
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Backup, contentDescription = "")
-                },
-                trailingIcon = {
-                    Icon(imageVector = Icons.Filled.Warning, contentDescription = "")
-                },
-                isError = isWeightError,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(15.dp)
-            )
+            Column() {
+                OutlinedTextField(
+                    value = numberWeight,
+                    onValueChange = {newWeight->
+                        Log.i("xxx", newWeight)
+                        var lastChar =
+                            if(newWeight.length == 0) {
+                                isWeightError = true
+                                newWeight
+                            }
+                            else{
+                                isWeightError = false
+                                newWeight.get(newWeight.length - 1)
+                            }
+                        var newValue =
+                            if (lastChar == '.' || lastChar == ',' || lastChar =='/')
+                                newWeight.dropLast(1)
+                            else
+                                newWeight
+                        Log.i("xxx", lastChar.toString())
+                        Log.i("xxx", newValue)
+                        numberWeight = newValue
+                    },
+                    modifier = Modifier
+                        .padding(bottom = 10.dp)
+                        .focusRequester(weightFocusRequester)
+                        .fillMaxWidth(),
+                    trailingIcon = {
+                        if(isWeightError){
+                            Icon(imageVector = Icons.Filled.Warning, contentDescription = "")
+                        }
+                    },
+                    isError = isWeightError,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = RoundedCornerShape(15.dp)
+                )
+                if(isWeightError){
+                    Text(text = stringResource(id = R.string.weight_error), modifier = Modifier.fillMaxWidth(),textAlign = TextAlign.Center)
+                }
+            }
+
         }
-        Column {
+        Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 text = stringResource(id = R.string.high),
                 modifier = Modifier.padding(bottom = 5.dp)
             )
-            OutlinedTextField(
-                value = numberHigh,
-                onValueChange = {newHeight->
-                    Log.i("xxx", newHeight)
-                    var lastChar =
-                        if(newHeight.length == 0)
-                            newHeight
-                        else
-                            newHeight.get(newHeight.length - 1)
-                    var newValue =
-                        if (lastChar == '.' || lastChar == ',')
-                            newHeight.dropLast(1)
-                        else
-                            newHeight
-                    Log.i("xxx", lastChar.toString())
-                    Log.i("xxx", newValue)
-                    numberHigh = newValue
-                },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Backup, contentDescription = "")
-                },
-                trailingIcon = {
-                    Icon(imageVector = Icons.Filled.Warning, contentDescription = "")
-                },
-                isError = isHighError,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(15.dp)
-            )
+            Column() {
+                OutlinedTextField(
+                    value = numberHigh,
+                    onValueChange = {newHeight->
+                        Log.i("xxx", newHeight)
+                        var lastChar =
+                            if(newHeight.isEmpty()){
+                                isHighError = true
+                                newHeight
+                            }
+                            else {
+                                isHighError = false
+                                newHeight.get(newHeight.length - 1)
+                            }
+                        var newValue =
+                            if (lastChar == '.' || lastChar == ',')
+                                newHeight.dropLast(1)
+                            else
+                                newHeight
+                        Log.i("xxx", lastChar.toString())
+                        Log.i("xxx", newValue)
+                        numberHigh = newValue
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        if(isHighError){
+                            Icon(imageVector = Icons.Filled.Warning, contentDescription = "")
+                        }
+                    },
+                    isError = isHighError,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = RoundedCornerShape(15.dp)
+                )
+                if(isHighError){
+                    Text(text = stringResource(id = R.string.high_error),modifier = Modifier.fillMaxWidth(),textAlign = TextAlign.Center)
+                }
+            }
         }
         Button(
             modifier = Modifier
@@ -193,14 +231,11 @@ fun BmiCalculate(){
             )
             ),
             onClick = {
-                if (numberWeight != "" || numberHigh!=""  || numberWeight.length != 0 || numberHigh.length!=0 || numberHigh.toDouble() >300 || numberWeight.toDouble() > 300){
+                isWeightError = numberWeight.isEmpty()
+                isHighError = numberHigh.isEmpty()
+                if (!isWeightError && !isHighError) {
                     bmi = calculateBmi(numberWeight.toDouble(), numberHigh.toDouble())
                     expandState = true
-                    isWeightError = false
-                    isHighError = false
-                }else{
-                    isWeightError = true
-                    isHighError = true
                 }
             }
         ) {
@@ -221,7 +256,7 @@ fun BmiCalculate(){
             modifier = Modifier
                 .fillMaxSize(),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-            backgroundColor = MaterialTheme.colors.primary
+            backgroundColor = getColor(bmi)
         ) {
             Column(
                 modifier = Modifier.padding(10.dp),
@@ -239,7 +274,7 @@ fun BmiCalculate(){
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Parabens, voce esta no seu peso ideal,felicidade",
+                    text = stringResource(id = resultBmi(bmi).toInt()),
                     fontSize = 28.sp,
                     textAlign = TextAlign.Center
                 )
@@ -258,7 +293,7 @@ fun BmiCalculate(){
                     Spacer(modifier = Modifier.padding(horizontal = 20.dp))
                     Button(
                         onClick = {
-
+                            context.startActivity(shareIntent)
                         },
                     ) {
                         Text(text = stringResource(id = R.string.share))

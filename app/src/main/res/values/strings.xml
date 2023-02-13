@@ -7,4 +7,12 @@
     <string name="your_score">Your Score</string>
     <string name="reset">Reset</string>
     <string name="share">Share</string>
+    <string name="bmiStatus0">Under weight</string>
+    <string name="bmiStatus1">Ideal weight</string>
+    <string name="bmiStatus2">Slightly overweight</string>
+    <string name="bmiStatus3">Grade Obesity |</string>
+    <string name="bmiStatus4">Grade Obesity ||</string>
+    <string name="bmiStatus5">Grade Obesity |||</string>
+    <string name="weight_error">Weight is required</string>
+    <string name="high_error">High is required</string>
 </resources>
